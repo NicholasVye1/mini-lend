@@ -2,22 +2,41 @@
 pragma solidity ^0.8.20;
 
 contract MiniLend {
-    // how much each person put in
     mapping(address => uint256) public deposited;
-    // how much each person owes
-    mapping(address => uint256) public borrowed;
+    mapping(address => uint256) public borrowed;      // debt as of the last catch-up
+    mapping(address => uint256) public lastAccrued;   // NEW: when we last caught up their interest
 
-    // you may borrow up to 50% of your deposit
-    uint256 public constant COLLATERAL_FACTOR = 50;
+    uint256 public constant COLLATERAL_FACTOR = 50;       // borrow up to 50% of deposit
+    uint256 public constant INTEREST_RATE = 10;           // NEW: 10% per year
+    uint256 public constant SECONDS_PER_YEAR = 365 days;  // NEW: helper for the math
 
-    // put money in
+    // NEW: pile up any interest owed since last time, then reset their clock
+    function _accrue(address user) internal {
+        uint256 principal = borrowed[user];
+        if (principal > 0) {
+            uint256 timeElapsed = block.timestamp - lastAccrued[user];
+            uint256 interest = (principal * INTEREST_RATE * timeElapsed) / (100 * SECONDS_PER_YEAR);
+            borrowed[user] = principal + interest;
+        }
+        lastAccrued[user] = block.timestamp;
+    }
+
+    // NEW: peek at what someone owes right now, interest included
+    function currentDebt(address user) public view returns (uint256) {
+        uint256 principal = borrowed[user];
+        if (principal == 0) return 0;
+        uint256 timeElapsed = block.timestamp - lastAccrued[user];
+        uint256 interest = (principal * INTEREST_RATE * timeElapsed) / (100 * SECONDS_PER_YEAR);
+        return principal + interest;
+    }
+
     function deposit() external payable {
         require(msg.value > 0, "Send some ETH");
         deposited[msg.sender] += msg.value;
     }
 
-    // borrow against your deposit
     function borrow(uint256 amount) external {
+        _accrue(msg.sender);   // NEW: catch up interest before anything else
         uint256 maxBorrow = (deposited[msg.sender] * COLLATERAL_FACTOR) / 100;
         require(borrowed[msg.sender] + amount <= maxBorrow, "Not enough collateral");
         require(address(this).balance >= amount, "Pool is empty");
@@ -26,14 +45,14 @@ contract MiniLend {
         payable(msg.sender).transfer(amount);
     }
 
-    // pay back what you owe
     function repay() external payable {
+        _accrue(msg.sender);   // NEW: catch up interest before subtracting
         require(borrowed[msg.sender] >= msg.value, "Paying back too much");
         borrowed[msg.sender] -= msg.value;
     }
 
-    // take your deposit back (only if you owe nothing)
     function withdraw(uint256 amount) external {
+        _accrue(msg.sender);   // NEW
         require(borrowed[msg.sender] == 0, "Repay your loan first");
         require(deposited[msg.sender] >= amount, "Not that much deposited");
 
