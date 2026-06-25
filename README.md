@@ -1,66 +1,86 @@
-## Foundry
+MiniLend
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A minimal, over-collateralized lending protocol written in Solidity, built with Foundry. Users deposit ETH as collateral, borrow against it, repay their loans, and withdraw their funds, all enforced by a smart contract.
 
-Foundry consists of:
+Learning project. This contract is for educational purposes and is not audited. Do not deploy it to mainnet or use it with real funds.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-## Documentation
+What it does
 
-https://book.getfoundry.sh/
+MiniLend captures the core mechanics that power real DeFi lending protocols (like Aave and Compound), stripped down to their essentials:
 
-## Usage
+Deposit — Put ETH into the protocol as collateral.
+Borrow — Borrow ETH against your deposit, up to a fixed collateralization limit.
+Repay — Pay back what you owe.
+Withdraw — Take your collateral back, once your debt is cleared.
 
-### Build
+Every rule is enforced on-chain. The contract will refuse any action that breaks the rules — for example, borrowing more than your collateral allows, or withdrawing while you still owe money.
 
-```shell
-$ forge build
-```
+How the borrowing math works
 
-### Test
+MiniLend is over-collateralized, meaning you can only borrow a fraction of what you deposit. This is what protects the protocol: your locked collateral is always worth more than your loan.
 
-```shell
-$ forge test
-```
+The limit is set by the collateral factor:
 
-### Format
+maxBorrow = deposit × COLLATERAL_FACTOR / 100
 
-```shell
-$ forge fmt
-```
+With COLLATERAL_FACTOR = 50, depositing 1 ETH lets you borrow up to 0.5 ETH. The contract checks this on every borrow and rejects anything over the limit.
 
-### Gas Snapshots
+Project structure
 
-```shell
-$ forge snapshot
-```
+mini-lend/
+├── src/
+│   └── MiniLend.sol        # The lending protocol contract
+├── test/
+│   └── MiniLend.t.sol      # Foundry tests
+├── foundry.toml            # Foundry configuration
+└── README.md
 
-### Anvil
+Running it yourself
 
-```shell
-$ anvil
-```
+You'll need Foundry installed.
 
-### Deploy
+Clone the repository:
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+bashgit clone https://github.com/NicholasVye1/mini-lend.git
+cd mini-lend
 
-### Cast
+Build the contracts:
 
-```shell
-$ cast <subcommand>
-```
+bashforge build
 
-### Help
+Run the tests:
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+bashforge test
+
+A passing run looks like this:
+
+[PASS] testDepositAndBorrow() (gas: 72897)
+Suite result: ok. 1 passed; 0 failed; 0 skipped
+
+Security notes
+
+Lending protocols are among the most-attacked contracts in DeFi. This project is a learning exercise and deliberately leaves out protections that production code would require. Known limitations include:
+
+
+No interest — Loans don't accrue any cost over time yet.
+Single asset — You deposit and borrow the same asset (ETH), so there's no price risk to manage. A real protocol borrows a different asset and needs a price oracle.
+No liquidations — There's no mechanism to close unsafe positions if collateral value drops.
+Uses transfer — A safer protocol would use the checks-effects-interactions pattern with call to guard against reentrancy.
+
+
+Roadmap
+
+Planned improvements, roughly in order of difficulty:
+
+
+ Interest accrual — Charge borrowers interest that grows over time.
+ Price oracle — Integrate a Chainlink price feed so collateral and borrowed assets can differ.
+ Liquidations — Allow anyone to close under-collateralized positions.
+ Reentrancy protection — Adopt the checks-effects-interactions pattern.
+ Testnet deployment — Deploy to Sepolia with a verified contract address.
+
+
+License
+
+MIT
