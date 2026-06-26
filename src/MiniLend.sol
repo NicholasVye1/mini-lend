@@ -22,6 +22,7 @@ contract MiniLend {
     uint256 public constant COLLATERAL_FACTOR = 50;       // borrow up to 50% of collateral value
     uint256 public constant INTEREST_RATE = 10;           // 10% per year
     uint256 public constant SECONDS_PER_YEAR = 365 days;
+    uint256 public constant LIQUIDATION_THRESHOLD = 80;   // danger zone: debt > 80% of collateral
 
     IERC20 public usd;            // the stablecoin people borrow
     IPriceOracle public oracle;   // tells us the ETH price
@@ -88,5 +89,30 @@ contract MiniLend {
 
         deposited[msg.sender] -= amount;
         payable(msg.sender).transfer(amount);
+    }
+
+    // Is this borrower in the danger zone? (debt has grown past 80% of collateral value)
+    function isLiquidatable(address user) public view returns (bool) {
+        uint256 debt = currentDebt(user);
+        if (debt == 0) return false;
+        uint256 maxHealthyDebt = (collateralValue(user) * LIQUIDATION_THRESHOLD) / 100;
+        return debt > maxHealthyDebt;
+    }
+
+    // Anyone can repay an unhealthy borrower's debt and claim their ETH collateral.
+    function liquidate(address user) external {
+        _accrue(user);
+        require(isLiquidatable(user), "Borrower is healthy");
+
+        uint256 debt = borrowed[user];
+        uint256 collateral = deposited[user];
+
+        // liquidator pays off the debt in mUSD...
+        usd.transferFrom(msg.sender, address(this), debt);
+
+        // ...and receives all the borrower's ETH collateral as the reward
+        borrowed[user] = 0;
+        deposited[user] = 0;
+        payable(msg.sender).transfer(collateral);
     }
 }

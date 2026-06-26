@@ -94,5 +94,46 @@ contract MiniLendTest is Test {
         assertEq(lend.borrowed(address(this)), 0);
     }
 
+function testHealthyBorrowerCannotBeLiquidated() public {
+        vm.deal(address(this), 1 ether);
+        lend.deposit{value: 1 ether}();            // $3000 collateral
+        lend.borrow(1000e18);                      // owe $1000 — very healthy
+
+        // a would-be liquidator with money ready
+        address liquidator = address(0xBEEF);
+        usd.mint(liquidator, 1000e18);
+        vm.prank(liquidator);
+        usd.approve(address(lend), 1000e18);
+
+        vm.prank(liquidator);
+        vm.expectRevert("Borrower is healthy");
+        lend.liquidate(address(this));
+    }
+
+    function testLiquidationAfterPriceCrash() public {
+        vm.deal(address(this), 1 ether);
+        lend.deposit{value: 1 ether}();            // $3000 collateral
+        lend.borrow(1500e18);                      // owe $1500 (the max 50%)
+
+        oracle.setPrice(1800e18);                  // 💥 ETH crashes to $1800
+        // collateral now worth $1800; 80% of that = $1440; debt $1500 > $1440 → liquidatable
+        assertTrue(lend.isLiquidatable(address(this)));
+
+        // liquidator steps in
+        address liquidator = address(0xBEEF);
+        usd.mint(liquidator, 1500e18);
+        vm.prank(liquidator);
+        usd.approve(address(lend), 1500e18);
+
+        uint256 before = liquidator.balance;
+        vm.prank(liquidator);
+        lend.liquidate(address(this));
+
+        // borrower wiped clean; liquidator got the 1 ETH
+        assertEq(lend.borrowed(address(this)), 0);
+        assertEq(lend.deposited(address(this)), 0);
+        assertEq(liquidator.balance, before + 1 ether);
+    }
+
     receive() external payable {}
 }
