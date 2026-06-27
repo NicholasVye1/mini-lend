@@ -18,7 +18,7 @@ An over-collateralized lending protocol written in Solidity and built with [Foun
 
 MiniLend separates the price of collateral from the value of debt, which is what makes a real lending market work: you lock up one asset (ETH) and borrow a different one (a USD stablecoin).
 
-**Collateral valuation.** Deposited ETH is priced in USD using an on-chain oracle. In tests this is a mock feed we control; in production it would be a Chainlink price feed. The contract talks to either one through the same `IPriceOracle` interface, so the protocol logic never changes.
+**Collateral valuation.** Deposited ETH is priced in USD using an on-chain oracle. In tests this is a mock feed I control; in production it would be a Chainlink price feed. The contract talks to either one through the same `IPriceOracle` interface, so the protocol logic never changes.
 
 **Borrowing limit (collateral factor: 50%).** A user can borrow up to 50% of their collateral's USD value. Depositing 1 ETH worth $3,000 allows borrowing up to $1,500.
 
