@@ -2,7 +2,7 @@
 
 An over-collateralised lending protocol written in Solidity and built with Foundry. Users deposit ETH as collateral and borrow a stablecoin against it. Loans accrue interest over time, collateral is valued through a price oracle, and unhealthy positions can be liquidated — the same core mechanics that power real DeFi protocols like Aave and Compound.
 
-I built this to properly understand how those mechanics fit together, rather than just reading about them. Everything below is what it does, how it works, and — just as importantly — what it doesn't do yet.
+I built this to properly understand how those mechanics fit together, rather than just reading about them. Everything below is what it does, how it works, and just as importantly, what it doesn't do yet.
 
 ## What it does
 
