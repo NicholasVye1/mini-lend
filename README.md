@@ -1,14 +1,14 @@
 # MiniLend
-An over-collateralized lending protocol written in Solidity and built with Foundry. Users deposit ETH as collateral and borrow a stablecoin against it. Loans accrue interest over time, collateral is valued through a price oracle, and unhealthy positions can be liquidated — the same core mechanics that power real DeFi protocols like Aave and Compound.
+An over-collateralized lending protocol written in Solidity and built with Foundry. Users deposit ETH as collateral and borrow a stablecoin against it. Loans accrue interest over time, collateral is valued through a price oracle, and unhealthy positions can be liquidated - the same core mechanics that power real DeFi protocols like Aave and Compound.
 
 ⚠️ Learning project. This contract is for educational purposes and is not audited. Do not deploy it to mainnet or use it with real funds.
 
 ## Features
 - Deposit ETH as collateral.
 - Borrow a stablecoin (mUSD) against that collateral, valued live by a price oracle.
-- Interest accrual — debt grows over time at a fixed annual rate.
-- Price oracle integration — collateral is valued in USD, so borrowing power moves with the ETH price.
-- Liquidation — anyone can close an unhealthy position by repaying its debt and claiming its collateral.
+- Interest accrual, debt grows over time at a fixed annual rate.
+- Price oracle integration, collateral is valued in USD, so borrowing power moves with the ETH price.
+- Liquidation, anyone can close an unhealthy position by repaying its debt and claiming its collateral.
 
 ## How it works
 MiniLend separates the price of collateral from the value of debt, which is what makes a real lending market work: you lock up one asset (ETH) and borrow a different one (a USD stablecoin).
@@ -37,4 +37,58 @@ README.md
 ## Running it yourself
 You'll need Foundry installed.
 
-Clone the
+Clone the repository:
+
+git clone https://github.com/NicholasVye1/mini-lend.git
+cd mini-lend
+
+Build the contracts:
+
+forge build
+
+Run the tests:
+
+forge test
+
+A passing run looks like this: Ran 7 tests for test/MiniLend.t.sol:MiniLendTest
+
+[PASS] testBorrowAgainstEthCollateral()
+
+[PASS] testCannotBorrowOverLimit()
+
+[PASS] testHealthyBorrowerCannotBeLiquidated()
+
+[PASS] testInterestAccrues()
+
+[PASS] testLiquidationAfterPriceCrash()
+
+[PASS] testPriceDropLowersBorrowingPower()
+
+[PASS] testRepay()
+
+Suite result: ok. 7 passed; 0 failed; 0 skipped
+
+## Test coverage
+The suite exercises the full lifecycle of the protocol:
+
+| Test | What it proves |
+|---|---|
+| testBorrowAgainstEthCollateral | A user can borrow stablecoin against ETH collateral, priced by the oracle. |
+| testCannotBorrowOverLimit | Borrowing past the 50% collateral factor is rejected. |
+| testPriceDropLowersBorrowingPower | When the ETH price falls, borrowing power shrinks automatically. |
+| testInterestAccrues | Debt grows by the correct amount after time passes. |
+| testRepay | A borrower can repay debt and clear their loan. |
+| testHealthyBorrowerCannotBeLiquidated | A safe position cannot be liquidated. |
+| testLiquidationAfterPriceCrash | After a price crash, an unhealthy position can be liquidated and its collateral claimed. |
+
+## Security notes
+Lending protocols are among the most-attacked contracts in DeFi. This is a learning project and deliberately omits protections that production code requires. Known limitations include:
+
+- Not audited — none of this has been professionally reviewed.
+- Simple interest — real protocols typically compound and use a utilization-based rate model.
+- Full liquidation — a liquidator seizes all collateral rather than just enough to restore health; production protocols liquidate partially.
+- No reentrancy guard — the contract should adopt the checks-effects-interactions pattern and use call instead of transfer.
+- Trusted oracle — a real deployment must consider oracle manipulation and stale-price protection.
+
+## License
+MIT
